@@ -1,2 +1,2 @@
-import DropLinkApp from '../components/droplink-app';
-export default function Page(){return <DropLinkApp/>}
+import SwooshitApp from '../components/swooshit-app';
+export default function Page(){return <SwooshitApp/>}

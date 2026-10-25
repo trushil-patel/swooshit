@@ -4,7 +4,7 @@ export const MAX_FOLDER_FILES = 10000;
 export async function createFolderArchive(files: File[], onProgress: (percent: number) => void = () => {}) {
   if (!files.length) throw new Error("Choose a folder containing at least one file. Empty folders cannot be selected.");
   if (files.length > MAX_FOLDER_FILES || files.reduce((sum, file) => sum + file.size, 0) > MAX_FOLDER_BYTES) {
-    throw new Error("Choose a smaller folder: up to 250 MiB and 10,000 files. Larger folders should be zipped outside DropLink first.");
+    throw new Error("Choose a smaller folder: up to 250 MiB and 10,000 files. Larger folders should be zipped outside swooshit first.");
   }
   const paths = files.map((file) => file.webkitRelativePath);
   const root = paths[0]?.split("/")[0];

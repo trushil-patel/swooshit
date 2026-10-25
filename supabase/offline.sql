@@ -90,6 +90,6 @@ grant execute on function public.dl_register(text,jsonb) to service_role;
 grant execute on function public.dl_reserve(uuid,text,jsonb,bigint,text) to service_role;
 
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
-values('droplink-later','droplink-later',false,26222592,array['application/octet-stream'])
+values('swooshit-later','swooshit-later',false,26222592,array['application/octet-stream'])
 on conflict(id) do update set public=false,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
 -- Do not add public storage policies. The backend issues short-lived signed URLs.

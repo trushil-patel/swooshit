@@ -1,8 +1,8 @@
-# DropLink: Technical Guide
+# swooshit: Technical Guide
 
-## What DropLink does
+## What swooshit does
 
-DropLink transfers a selected file directly from one web browser to another. It does not upload the file to Vercel, Render, or a storage provider.
+swooshit transfers a selected file directly from one web browser to another. It does not upload the file to Vercel, Render, or a storage provider.
 
 The app uses a short pairing code or QR link to help two browsers find one another. Once paired, the file travels over a browser-to-browser WebRTC data channel.
 
@@ -31,13 +31,13 @@ app/
   globals.css             Global CSS and visual utility classes
 
 components/
-  droplink-app.tsx        Main UI, pairing state, WebRTC connection, and transfer UI
+  swooshit-app.tsx        Main UI, pairing state, WebRTC connection, and transfer UI
 
 server/
   signaling.ts            Express + Socket.IO signaling service
 
 docs/
-  DROPLINK_GUIDE.md       This guide
+  SWOOSHIT_GUIDE.md       This guide
 
 .env.example              Environment-variable reference
 ```
@@ -163,7 +163,7 @@ Render deploys the signaling service from the same repository as a Node Web Serv
 Opening the Render URL should return:
 
 ```json
-{"service":"DropLink signaling","status":"ok"}
+{"service":"swooshit signaling","status":"ok"}
 ```
 
 ## Debugging checklist
@@ -213,11 +213,4 @@ npm.cmd run signal
 - Use TURN credentials that expire quickly.
 - Validate size limits and file-transfer rules if this becomes a public product.
 
-## Good next improvements
 
-1. Replace fixed UI labels with actual sender/receiver device names.
-2. Add a transfer manifest so the receiver can accept or reject before file bytes start.
-3. Add cancel, pause/resume, retry, and detailed per-file progress.
-4. Store a local transfer history using IndexedDB.
-5. Add TURN with short-lived credentials for reliable internet-wide transfers.
-6. Add automated browser tests for pairing and file download behavior.

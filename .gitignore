@@ -10,7 +10,8 @@ out/
 # Production builds
 build/
 dist/
-docs/
+docs/*
+!docs/SWOOSHIT_GUIDE.md
 # Local environment configuration
 .env
 .env.*

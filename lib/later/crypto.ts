@@ -1,5 +1,5 @@
 export const LATER_MAX_BYTES = 25 * 1024 * 1024;
-const aad = new TextEncoder().encode("droplink-later-v1");
+const aad = new TextEncoder().encode("swooshit-later-v1");
 export type Envelope = { version: 1; iv: string; key: string };
 export type LocalIdentity = { token: string; privateKey: JsonWebKey; publicKey: JsonWebKey };
 

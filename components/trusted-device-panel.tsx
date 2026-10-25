@@ -4,7 +4,7 @@ import { Check, Copy, Fingerprint, Radio } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type Identity = { code: string; token: string };
-const storageKey = 'droplink-trusted-device-v1';
+const storageKey = 'swooshit-trusted-device-v1';
 
 function createIdentity(): Identity {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

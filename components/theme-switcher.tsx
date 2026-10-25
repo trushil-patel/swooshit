@@ -6,10 +6,10 @@ import { parseTheme, type ThemePreference } from "../lib/theme";
 export default function ThemeSwitcher() {
   const [preference, setPreference] = useState<ThemePreference | null>(null);
   useEffect(() => {
-    try { setPreference(parseTheme(localStorage.getItem("droplink-theme"))); }
+    try { setPreference(parseTheme(localStorage.getItem("swooshit-theme"))); }
     catch { setPreference("light"); }
     const sync = (event: StorageEvent) => {
-      if (event.key === "droplink-theme" || event.key === null) setPreference(parseTheme(event.newValue));
+      if (event.key === "swooshit-theme" || event.key === null) setPreference(parseTheme(event.newValue));
     };
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
@@ -27,7 +27,7 @@ export default function ThemeSwitcher() {
         const next = dark ? "light" : "dark";
         setPreference(next);
         document.documentElement.dataset.theme = next;
-        try { localStorage.setItem("droplink-theme", next); } catch {}
+        try { localStorage.setItem("swooshit-theme", next); } catch {}
       }}>
       {dark ? <Sun size={20} strokeWidth={1.8} aria-hidden="true" /> : <Moon size={20} strokeWidth={1.8} aria-hidden="true" />}
   </button>;

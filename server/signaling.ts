@@ -7,7 +7,7 @@ type FileInfo = { name: string; size: number };
 type TransferRequest = { senderId: string; receiverId: string; files: FileInfo[] };
 const app = express();
 const httpServer = createServer(app);
-app.get('/', (_request, response) => response.status(200).json({ service: 'DropLink signaling', status: 'ok' }));
+app.get('/', (_request, response) => response.status(200).json({ service: 'swooshit signaling', status: 'ok' }));
 const allowedOrigins = process.env.CLIENT_ORIGIN?.split(',').map(value => value.trim().replace(/\/$/, '')).filter(Boolean);
 const io = new Server(httpServer, { cors: { origin: (origin, callback) => callback(!allowedOrigins?.length || !origin || allowedOrigins.includes(origin.replace(/\/$/, '')) ? null : new Error('Origin not allowed'), true), methods: ['GET', 'POST'] } });
 
@@ -25,7 +25,7 @@ io.on('connection', socket => {
 
   socket.on('request-transfer', ({ code, files, kind }: { code: string; files: FileInfo[]; kind?: string }) => {
     const receiverId = devices.get(code);
-    if (!receiverId || !io.sockets.sockets.has(receiverId)) return socket.emit('app-error', 'That device is offline. Ask them to open DropLink.');
+    if (!receiverId || !io.sockets.sockets.has(receiverId)) return socket.emit('app-error', 'That device is offline. Ask them to open swooshit.');
     if (!files?.length) return socket.emit('app-error', 'Choose at least one file.');
     const requestId = randomUUID();
     requests.set(requestId, { senderId: socket.id, receiverId, files });
@@ -51,4 +51,4 @@ io.on('connection', socket => {
   });
 });
 
-httpServer.listen(Number(process.env.PORT ?? process.env.SIGNAL_PORT ?? 3001), () => console.log('DropLink signaling service started'));
+httpServer.listen(Number(process.env.PORT ?? process.env.SIGNAL_PORT ?? 3001), () => console.log('swooshit signaling service started'));

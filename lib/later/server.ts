@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 
-export const BUCKET = "droplink-later";
+export const BUCKET = "swooshit-later";
 export class LaterError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }

@@ -4,7 +4,7 @@ let identityPromise: Promise<LocalIdentity> | null = null;
 export function getLaterIdentity() {
   if (!identityPromise) identityPromise = (async () => {
     if (!globalThis.crypto?.subtle) throw new Error("Send for later requires HTTPS or localhost for browser encryption.");
-    const saved = localStorage.getItem("droplink-later-identity-v1");
+    const saved = localStorage.getItem("swooshit-later-identity-v1");
     if (saved) {
       const identity = JSON.parse(saved) as LocalIdentity;
       if (!/^[a-f0-9]{64}$/.test(identity.token) || !identity.privateKey?.d || !identity.publicKey?.n) throw new Error("Stored inbox identity is damaged. Do not clear browser data if you need existing transfers.");
@@ -12,7 +12,7 @@ export function getLaterIdentity() {
     }
     const identity = await createIdentity();
     // Persist before registering: never create an inbox whose private key is lost.
-    localStorage.setItem("droplink-later-identity-v1", JSON.stringify(identity));
+    localStorage.setItem("swooshit-later-identity-v1", JSON.stringify(identity));
     return identity;
   })().catch((error) => { identityPromise = null; throw error; });
   return identityPromise;

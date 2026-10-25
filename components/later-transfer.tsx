@@ -40,7 +40,7 @@ export default function LaterTransfer({ active, onOpen }: { active: boolean; onO
     void (async () => {
       try {
         // Existing inboxes check for requests even when the Live tab is selected.
-        if (!active && !localStorage.getItem("droplink-later-identity-v1")) return;
+        if (!active && !localStorage.getItem("swooshit-later-identity-v1")) return;
         const identity = await getLaterIdentity();
         const result = await laterApi("register", { publicKey: identity.publicKey });
         if (stopped) return;

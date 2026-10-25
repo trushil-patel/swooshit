@@ -23,14 +23,14 @@ import {
 
 type FileInfo = { name: string; size: number };
 type Request = { requestId: string; from: string; files: FileInfo[]; kind?: "files" | "text" };
-const CODE_MIME = "application/x-droplink-code";
+const CODE_MIME = "application/x-swooshit-code";
 const format = (value: number) =>
   value < 1048576
     ? `${Math.ceil(value / 1024)} KB`
     : `${(value / 1048576).toFixed(1)} MB`;
 const newCode = () => String(Math.floor(100000 + Math.random() * 900000));
 
-export default function DropLinkApp() {
+export default function SwooshitApp() {
   const [deliveryMode, setDeliveryMode] = useState<"live" | "later">("live");
   const [deviceCode, setDeviceCode] = useState("");
   const [targetCode, setTargetCode] = useState("");
@@ -252,8 +252,8 @@ export default function DropLinkApp() {
     [getPeer, relay],
   );
   useEffect(() => {
-    const stored = localStorage.getItem("droplink-device-code") || newCode();
-    localStorage.setItem("droplink-device-code", stored);
+    const stored = localStorage.getItem("swooshit-device-code") || newCode();
+    localStorage.setItem("swooshit-device-code", stored);
     setDeviceCode(stored);
     const client = io(signalUrl, {
       transports: ["polling", "websocket"],
@@ -274,7 +274,7 @@ export default function DropLinkApp() {
       if (sender.current) {
         try {
         const pc = await getPeer();
-        const dc = pc.createDataChannel("droplink-files");
+        const dc = pc.createDataChannel("swooshit-files");
         attach(dc);
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
@@ -351,7 +351,7 @@ export default function DropLinkApp() {
           </span>
           <div>
             <h1 className="text-lg font-semibold">
-              DropLink <span className="text-cyan-300">/ P2P</span>
+              swooshit <span className="text-cyan-300">/ P2P</span>
             </h1>
             <p className="font-mono text-xs text-slate-500">
               SIMPLE DEVICE TRANSFER

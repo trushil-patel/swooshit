@@ -10,7 +10,7 @@
 ## Your setup steps
 
 1. Create a [Supabase project](https://supabase.com/dashboard). Choose a region near your users. You do not need to enable email or anonymous Supabase Auth: this feature uses private browser device credentials through the Next.js backend.
-2. In Supabase **SQL Editor**, paste and run [supabase/offline.sql](supabase/offline.sql). It creates the device/request/quota tables, backend-only functions and the private `droplink-later` bucket. Run this on your own project. Do not add public storage policies or disable row-level security.
+2. In Supabase **SQL Editor**, paste and run [supabase/offline.sql](supabase/offline.sql). It creates the device/request/quota tables, backend-only functions and the private `swooshit-later` bucket. Run this on your own project. Do not add public storage policies or disable row-level security.
 3. From the project settings, copy the **Project URL** and **service_role key**. Treat the service-role key as a server secret; it bypasses row-level security. Do not paste it into chat or commit it. See [Supabase access-control guidance](https://supabase.com/docs/guides/storage/security/access-control).
 4. In Vercel project settings, add these environment variables for Production (and separately for Preview if you use it):
 
@@ -54,3 +54,7 @@ Remove-Item Env:RUN_LATER_INTEGRATION
 Also test Reject, a failed upload, page refresh, receiver offline during upload, sender offline during download, expired requests, and successful scheduled cleanup. Actual downloads still depend on browser permissions; acceptance hands the decrypted file to the browser but cannot prove it was saved to disk.
 
 Existing dependency audit warnings remain separate work. Do not treat a passing build as a production security audit.
+
+## Existing installations after the swooshit rename
+
+Redeploy both the frontend and signaling server together, and rerun `supabase/offline.sql` to create the `swooshit-later` bucket. Browser storage keys and the encrypted transfer format now use the new name: pair trusted devices again and create a new offline inbox on each device. Download pending offline items using the previous app version before upgrading; the renamed app cannot decrypt those existing items. Saved theme preferences and live device codes also reset. Update hosting project names and URLs separately in your hosting accounts if desired.

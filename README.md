@@ -1,4 +1,4 @@
-# DropLink
+# swooshit
 
 ## Live or send for later
 
@@ -6,15 +6,15 @@ Choose **Live transfer** for the existing WebRTC flow, or **Send for later** for
 
 Offline requests use a separate inbox code, a private browser credential and encryption keys. The receiver must create its inbox once before going offline. Clearing browser data loses access. Initial limits: 25 MiB per item and a 24-hour download window. Live transfer remains available without configuring offline mode. No cloud deployment has been provisioned by these code changes.
 
-For a full explanation of the architecture, stack, pairing flow, deployment, troubleshooting, and next improvements, see [the DropLink technical guide](docs/DROPLINK_GUIDE.md).
+For a full explanation of the architecture, stack, pairing flow, deployment, troubleshooting, and next improvements, see [the swooshit technical guide](docs/SWOOSHIT_GUIDE.md).
 
-DropLink sends files and editor text using encrypted WebRTC data channels. Direct connections are allowed, with Metered TURN fallback for restricted networks. Socket.IO only relays connection metadata; it never receives file contents.
+swooshit sends files and editor text using encrypted WebRTC data channels. Direct connections are allowed, with Metered TURN fallback for restricted networks. Socket.IO only relays connection metadata; it never receives file contents.
 
 ## Local development
 
 ### Folder transfers
 
-In **FILES** mode, click **Choose folder**. DropLink prepares `folder-name.zip` locally, preserving the selected files' paths and subfolders. Enter the receiver code and request the transfer as usual. After acceptance, the receiver downloads one ZIP and extracts it. The ZIP is removed from the sender's list after receipt confirmation. The ZIP uses the same WebRTC connection as ordinary files; nothing is uploaded to cloud storage.
+In **FILES** mode, click **Choose folder**. swooshit prepares `folder-name.zip` locally, preserving the selected files' paths and subfolders. Enter the receiver code and request the transfer as usual. After acceptance, the receiver downloads one ZIP and extracts it. The ZIP is removed from the sender's list after receipt confirmation. The ZIP uses the same WebRTC connection as ordinary files; nothing is uploaded to cloud storage.
 
 Folder preparation is limited to 250 MiB and 10,000 files because it uses browser memory; less powerful devices may need smaller folders. Empty directories, permissions and symlink semantics are not preserved. Folder-picker support depends on the browser/device. If unavailable, or for larger folders, create a ZIP with your operating system and send it as a normal file. Use **Choose folder** rather than dropping a directory into the ordinary file drop zone.
 
@@ -36,12 +36,12 @@ The Next.js frontend belongs on Vercel, but its Socket.IO signaling service must
 
 1. Push the latest project changes to the `main` branch on GitHub.
 2. Sign in to [Render](https://dashboard.render.com/) with GitHub.
-3. Select **New** > **Web Service**, then select the `droplink` repository.
+3. Select **New** > **Web Service**, then select the `swooshit` repository.
 4. Use these service settings:
 
    | Field | Value |
    | --- | --- |
-   | Name | `droplink-signaling` (or another unique name) |
+   | Name | `swooshit-signaling` (or another unique name) |
    | Region | Choose one near your users |
    | Branch | `main` |
    | Runtime | `Node` |
@@ -50,13 +50,13 @@ The Next.js frontend belongs on Vercel, but its Socket.IO signaling service must
    | Start Command | `npm run signal` |
    | Health Check Path | `/` |
 
-5. Under **Environment Variables**, add `CLIENT_ORIGIN` with your Vercel URL, for example `https://droplink.vercel.app`. During testing you can permit both local and production URLs with a comma-separated value: `http://localhost:3000,https://droplink.vercel.app`.
+5. Under **Environment Variables**, add `CLIENT_ORIGIN` with your Vercel URL, for example `https://swooshit.vercel.app`. During testing you can permit both local and production URLs with a comma-separated value: `http://localhost:3000,https://swooshit.vercel.app`.
 6. Choose a compute plan and click **Create Web Service**. Do not define `PORT`; Render supplies it automatically and the signaling server uses it.
-7. Wait for the deploy to succeed, then copy Render’s public HTTPS URL, for example `https://droplink-signaling.onrender.com`. Opening that URL should return a small JSON health response.
+7. Wait for the deploy to succeed, then copy Render’s public HTTPS URL, for example `https://swooshit-signaling.onrender.com`. Opening that URL should return a small JSON health response.
 8. In Vercel, open the frontend project’s **Settings** > **Environment Variables**. Add:
 
    ```text
-   NEXT_PUBLIC_SIGNALING_URL=https://droplink-signaling.onrender.com
+   NEXT_PUBLIC_SIGNALING_URL=https://swooshit-signaling.onrender.com
    ```
 
 9. Redeploy the Vercel project. Open the live site on two devices to test pairing and a small file transfer.
