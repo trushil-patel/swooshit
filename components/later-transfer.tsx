@@ -117,7 +117,7 @@ export default function LaterTransfer({ active, onOpen }: { active: boolean; onO
       <h2 className="text-xl font-semibold">Send for later</h2>
       <p className="mt-2 text-sm text-slate-400">Encrypted temporary storage. The receiver can be offline. Keep the sender open until the status says Queued.</p>
       <div className="mt-5 rounded-xl bg-white/5 p-4">
-        <p className="text-xs text-cyan-200">Your private inbox's public code (different from Live transfer)</p>
+        <p className="text-xs text-cyan-200">Your private inbox&apos;s public code (different from Live transfer)</p>
         <p className="mt-2 font-mono text-3xl tracking-widest">{code || "------"}</p>
         <p className="mt-2 text-xs text-slate-400">Share this code once. Keep using this browser; clearing browser data loses access to this inbox and its decryption keys.</p>
         <button disabled={!code} onClick={() => void navigator.clipboard.writeText(code).then(() => setStatus("Inbox code copied.")).catch(() => setError("Select the inbox code and copy it manually."))} className="mt-3 rounded-lg border border-cyan-300/25 px-3 py-2 text-sm text-cyan-200">Copy inbox code</button>

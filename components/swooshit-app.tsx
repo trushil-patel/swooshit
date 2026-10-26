@@ -12,14 +12,16 @@ import { createFolderArchive } from "../lib/folder-archive";
 import {
   Check,
   Copy,
-  Download,
   File,
   Link2,
-  LoaderCircle,
   ShieldCheck,
   UploadCloud,
   Wifi,
 } from "lucide-react";
+
+type SignalPayload =
+  | { type: "offer" | "answer"; description: RTCSessionDescriptionInit }
+  | { type: "candidate"; candidate: RTCIceCandidateInit };
 
 type FileInfo = { name: string; size: number };
 type Request = { requestId: string; from: string; files: FileInfo[]; kind?: "files" | "text" };
@@ -45,7 +47,6 @@ export default function SwooshitApp() {
   const [error, setError] = useState("");
   const [connectionWarning, setConnectionWarning] = useState("");
   const [incoming, setIncoming] = useState<Request | null>(null);
-  const [requestId, setRequestId] = useState("");
   const [progress, setProgress] = useState(0);
   const [copied, setCopied] = useState(false);
   const socket = useRef<Socket | null>(null);
@@ -226,7 +227,7 @@ export default function SwooshitApp() {
     finally { peerLoading.current = null; }
   }, [attach, relay]);
   const handleSignal = useCallback(
-    async ({ payload }: { payload: any }) => {
+    async ({ payload }: { payload: SignalPayload }) => {
       try {
         const pc = await getPeer();
         if (payload.type === "offer") {
@@ -241,10 +242,10 @@ export default function SwooshitApp() {
           await pc.setRemoteDescription(payload.description);
           for (const candidate of pending.current) await pc.addIceCandidate(candidate);
           pending.current = [];
-        } else if (payload.type === "candidate")
-          pc.remoteDescription
-            ? await pc.addIceCandidate(payload.candidate)
-            : pending.current.push(payload.candidate);
+        } else if (payload.type === "candidate") {
+          if (pc.remoteDescription) await pc.addIceCandidate(payload.candidate);
+          else pending.current.push(payload.candidate);
+        }
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "Could not negotiate the secure connection.");
       }
@@ -252,8 +253,10 @@ export default function SwooshitApp() {
     [getPeer, relay],
   );
   useEffect(() => {
-    const stored = localStorage.getItem("swooshit-device-code") || newCode();
+    let stored = localStorage.getItem("swooshit-device-code") || newCode();
     localStorage.setItem("swooshit-device-code", stored);
+    // Read browser storage after hydration so server and initial client HTML agree.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDeviceCode(stored);
     const client = io(signalUrl, {
       transports: ["polling", "websocket"],
@@ -262,15 +265,23 @@ export default function SwooshitApp() {
     socket.current = client;
     client.on("connect", () => {
       client.emit("register-device", { code: stored });
+      setStatus("Registering device...");
+    });
+    client.on("device-ready", ({ code }: { code: string }) => {
+      stored = code;
+      localStorage.setItem("swooshit-device-code", code);
+      setDeviceCode(code);
       setStatus("Ready to receive requests");
     });
-    client.on("device-ready", () => setStatus("Ready to receive requests"));
+    client.on("connect_error", () => setError("Could not connect to signaling. Check the server URL and allowed frontend origin."));
     client.on("incoming-transfer", setIncoming);
-    client.on("app-error", setError);
+    client.on("app-error", (message: string) => {
+      setError(message);
+      setStatus("Transfer error ? see details below");
+    });
     client.on("signal", (message) => { signalQueue.current = signalQueue.current.then(() => handleSignal(message)); });
     client.on("transfer-ready", async ({ requestId: id }) => {
       requestRef.current = id;
-      setRequestId(id);
       if (sender.current) {
         try {
         const pc = await getPeer();
@@ -317,7 +328,6 @@ export default function SwooshitApp() {
     sender.current = false;
     outgoingFiles.current = null;
     requestRef.current = incoming.requestId;
-    setRequestId(incoming.requestId);
     socket.current?.emit("accept-transfer", { requestId: incoming.requestId });
     setStatus("Request accepted — establishing secure link…");
     setIncoming(null);
@@ -367,12 +377,12 @@ export default function SwooshitApp() {
       </header>
       <section className="relative z-10 mx-auto max-w-6xl px-5 pb-12 pt-8 sm:pt-14">
         <div className="max-w-3xl">
-          <p className="font-mono text-xs uppercase tracking-[.24em] text-cyan-300">// PRIVATE_FILE_RELAY</p>
+          <p className="font-mono text-xs uppercase tracking-[.24em] text-cyan-300">{"// PRIVATE_FILE_RELAY"}</p>
           <h2 className="mt-5 text-5xl font-semibold leading-[.95] tracking-[-.065em] sm:text-7xl">Send a file with <span className="text-cyan-300">one code.</span></h2>
           <p className="mt-6 max-w-2xl text-base leading-7 text-slate-400 sm:text-lg">Transfer live with WebRTC, or send encrypted files to a temporary inbox for later. No account required.</p>
           <div className="mt-8 flex flex-wrap gap-3"><span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 font-mono text-xs text-cyan-100">01 / ENTER CODE</span><span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 font-mono text-xs text-cyan-100">02 / ACCEPT REQUEST</span><span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 font-mono text-xs text-cyan-100">03 / DIRECT DOWNLOAD</span></div>
         </div>
-        <div className="mt-10 grid gap-3 md:grid-cols-3"><div className="glass rounded-2xl p-4"><p className="font-mono text-xs text-cyan-300">CHOOSE_YOUR_MODE</p><p className="mt-2 text-sm text-slate-400">Live connections or encrypted temporary storage.</p></div><div className="glass rounded-2xl p-4"><p className="font-mono text-xs text-cyan-300">FIXED_DEVICE_CODE</p><p className="mt-2 text-sm text-slate-400">One persistent six-digit code per browser.</p></div><div className="glass rounded-2xl p-4"><p className="font-mono text-xs text-cyan-300">ACCEPT_ONCE</p><p className="mt-2 text-sm text-slate-400">Receiver reviews files before transfer begins.</p></div></div>
+        <div className="mt-10 grid gap-3 md:grid-cols-3"><div className="glass rounded-2xl p-4"><p className="font-mono text-xs text-cyan-300">CHOOSE_YOUR_MODE</p><p className="mt-2 text-sm text-slate-400">Live connections or encrypted temporary storage.</p></div><div className="glass rounded-2xl p-4"><p className="font-mono text-xs text-cyan-300">DEVICE_CODE</p><p className="mt-2 text-sm text-slate-400">A saved six-digit code, reassigned if already in use.</p></div><div className="glass rounded-2xl p-4"><p className="font-mono text-xs text-cyan-300">ACCEPT_ONCE</p><p className="mt-2 text-sm text-slate-400">Receiver reviews files before transfer begins.</p></div></div>
       </section>
       <nav aria-label="Delivery mode" className="relative z-10 mx-auto mb-5 flex max-w-6xl gap-3 px-5">
         <button aria-pressed={deliveryMode === "live"} onClick={() => setDeliveryMode("live")} className={`rounded-xl px-4 py-3 text-sm ${deliveryMode === "live" ? "bg-cyan-300 text-slate-950" : "glass"}`}>Live transfer</button>

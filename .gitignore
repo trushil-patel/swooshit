@@ -10,12 +10,10 @@ out/
 # Production builds
 build/
 dist/
-docs/*
-!docs/SWOOSHIT_GUIDE.md
 # Local environment configuration
 .env
 .env.*
-.env.example
+!.env.example
 
 # Logs and package-manager caches
 *.log
@@ -37,3 +35,43 @@ pnpm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Local task artifacts and test output
+work/
+outputs/
+coverage/
+playwright-report/
+test-results/
+
+# Private local documentation and release planning
+/OFFLINE_SETUP.md
+/SWOOSHIT_GITHUB_CLEANUP_REPORT.md
+/SWOOSHIT_FINAL_RELEASE_CHECKLIST.md
+/SWOOSHIT_RELEASE_VERIFICATION.md
+/LINKEDIN_PROJECT_DESCRIPTION.md
+/private/
+/docs/private/
+
+# Private Supabase setup, local state, and database exports
+/supabase/
+.supabase/
+*.dump
+*.sql.gz
+*.backup
+
+# Credentials and local authentication configuration
+.envrc
+.npmrc
+.netrc
+.pgpass
+credentials.json
+service-account*.json
+serviceAccount*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+id_rsa*
+id_ed25519*
+secrets/

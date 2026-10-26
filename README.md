@@ -1,87 +1,167 @@
-# swooshit
+# Swooshit
 
-## Live or send for later
+### Files and text, from one browser to another.
 
-Choose **Live transfer** for the existing WebRTC flow, or **Send for later** for browser-encrypted temporary storage when devices are online at different times. Offline mode needs a Supabase project and Vercel server variables; follow [OFFLINE_SETUP.md](OFFLINE_SETUP.md) and run [supabase/offline.sql](supabase/offline.sql).
+Swooshit moves files, folders, and code snippets between devices without creating an account. Use a six-digit code to request a live transfer, or leave an encrypted item in a temporary inbox for a device that will come online later.
 
-Offline requests use a separate inbox code, a private browser credential and encryption keys. The receiver must create its inbox once before going offline. Clearing browser data loses access. Initial limits: 25 MiB per item and a 24-hour download window. Live transfer remains available without configuring offline mode. No cloud deployment has been provisioned by these code changes.
+Built for laptop-to-phone sharing and developer workflows, with receiver approval, local folder packaging, and browser-side encryption.
 
-For a full explanation of the architecture, stack, pairing flow, deployment, troubleshooting, and next improvements, see [the swooshit technical guide](docs/SWOOSHIT_GUIDE.md).
+[Get started](#getting-started) ? [Architecture](#architecture) ? [Deployment guide](docs/SWOOSHIT_GUIDE.md)
 
-swooshit sends files and editor text using encrypted WebRTC data channels. Direct connections are allowed, with Metered TURN fallback for restricted networks. Socket.IO only relays connection metadata; it never receives file contents.
+## Preview
 
-## Local development
+Run the app at `http://localhost:3000` to explore the real interface: **Live transfer**, **Send for later**, an editable code/text panel, and light/dark themes. No verified screenshot or demo video is currently included. Follow the [capture instructions and demo sequence](docs/PREVIEW.md) to add a real product preview. Local browser tests verify file, folder ZIP, and Unicode-text delivery between two isolated Chrome contexts on one Windows host. Cross-device networks, TURN, and hosted offline delivery remain separate deployment checks.
 
-### Folder transfers
+## Features
 
-In **FILES** mode, click **Choose folder**. swooshit prepares `folder-name.zip` locally, preserving the selected files' paths and subfolders. Enter the receiver code and request the transfer as usual. After acceptance, the receiver downloads one ZIP and extracts it. The ZIP is removed from the sender's list after receipt confirmation. The ZIP uses the same WebRTC connection as ordinary files; nothing is uploaded to cloud storage.
+| Feature | What it does |
+| --- | --- |
+| Live transfers | Sends file bytes over encrypted WebRTC data channels after receiver approval. Both browsers stay open. |
+| Folder sharing | Packages files locally into a ZIP, preserving subfolder paths. Up to 250 MiB and 10,000 files; empty directories are not included. |
+| Code and text | Preserves UTF-8 text, indentation, and blank lines in an editable receiver panel with copy support. |
+| Send for later | Encrypts items in the browser and uploads ciphertext to private Supabase Storage. Requires optional backend setup. |
+| Temporary inboxes | Separate inbox codes, a 25 MiB per-item limit, a 24-hour access window, and server-side quotas. |
+| Connection fallback | Uses STUN for direct connections and optional Metered TURN for relayed connections. |
+| Transfer feedback | Shows progress and removes outgoing live files after a receiver acknowledgement. This does not prove a file was saved to disk. |
 
-Folder preparation is limited to 250 MiB and 10,000 files because it uses browser memory; less powerful devices may need smaller folders. Empty directories, permissions and symlink semantics are not preserved. Folder-picker support depends on the browser/device. If unavailable, or for larger folders, create a ZIP with your operating system and send it as a normal file. Use **Choose folder** rather than dropping a directory into the ordinary file drop zone.
+Live signaling validates metadata, limits event rates, reserves codes without overwriting connected devices, and restricts signals to accepted transfer participants. Requests expire after two minutes; negotiation rooms expire after 30 minutes. A live request supports up to 256 files (a folder ZIP counts as one). Read the [operational limits](docs/SWOOSHIT_GUIDE.md#signaling-limits) before deployment.
 
-```bash
-npm.cmd install
-npm.cmd run signal # Socket.IO at http://localhost:3001
-npm.cmd run dev    # Next.js UI at http://localhost:3000
+## Tech stack
+
+| Layer | Technologies |
+| --- | --- |
+| Interface | Next.js App Router, React 19, TypeScript, Tailwind CSS, Lucide React |
+| Browser tools | React Dropzone, JSZip, WebRTC, Web Crypto API |
+| Live coordination | Node.js, Express, Socket.IO |
+| Optional offline backend | Next.js route handlers, Supabase Postgres and private Storage |
+| Deployment configuration | Vercel frontend/API and scheduled cleanup; a separate persistent signaling host such as Render |
+| Quality checks | ESLint, TypeScript, Node.js test runner with tsx, GitHub Actions |
+
+Vercel Analytics is integrated in the root layout. Hosting configuration is provided; this repository does not assert a verified public deployment.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  A[Sender browser] <-->|Codes, file metadata, SDP and ICE| S[Socket.IO signaling]
+  S <-->|Requests and negotiation| B[Receiver browser]
+  A <-->|Encrypted WebRTC; direct or TURN relay| B
+  A -->|Credential and metadata| N[Next.js offline API]
+  B -->|Inbox authorization| N
+  N --> D[(Supabase Postgres)]
+  N -->|Signed URLs| O[(Private Storage)]
+  A -->|Browser-encrypted upload| O
+  O -->|Ciphertext; decrypt locally| B
 ```
 
-Copy `.env.example` to `.env.local` and set NEXT_PUBLIC_SIGNALING_URL before starting Next.js. Use two browsers/devices: select files on the sender, enter the receiver's six-digit code, request transfer, then accept on the receiver. The selected files start transferring automatically when the secure connection opens.
+Live file contents bypass signaling, although filenames and sizes are included in requests. TURN may relay encrypted traffic. Offline content and filenames use AES-256-GCM encryption; RSA-OAEP wraps the content key for the recipient. The backend sees routing metadata, sizes, item types, and timestamps. Read the [security boundaries](docs/SWOOSHIT_GUIDE.md#security-boundaries).
 
-## Vercel Web Analytics
+## Getting started
 
-The frontend includes Vercel Web Analytics in the root layout to track page views. In the Vercel project dashboard, open **Analytics**, click **Enable**, then deploy the updated frontend. Visit the deployed site to start collecting page views; development mode does not send analytics data. See the [Vercel Web Analytics setup guide](https://vercel.com/docs/analytics/quickstart).
+Use **Node.js 22 or newer**, npm, and a browser with WebRTC and Web Crypto support. Node.js 22 is the CI baseline.
 
-## Deploy the signaling server on Render
+```sh
+git clone https://github.com/trushil-patel/droplink.git swooshit
+cd swooshit
+npm ci
+cp .env.example .env.local
+```
 
-The Next.js frontend belongs on Vercel, but its Socket.IO signaling service must run on a host that supports persistent WebSocket connections. These steps deploy only the signaling service to Render.
+The clone URL matches the current Git remote; the product and npm package are named Swooshit. Update the URL if the GitHub repository is renamed.
 
-1. Push the latest project changes to the `main` branch on GitHub.
-2. Sign in to [Render](https://dashboard.render.com/) with GitHub.
-3. Select **New** > **Web Service**, then select the `swooshit` repository.
-4. Use these service settings:
+On PowerShell, use `Copy-Item .env.example .env.local`. If PowerShell blocks npm's script shim, use `npm.cmd` in place of `npm`.
 
-   | Field | Value |
-   | --- | --- |
-   | Name | `swooshit-signaling` (or another unique name) |
-   | Region | Choose one near your users |
-   | Branch | `main` |
-   | Runtime | `Node` |
-   | Root Directory | Leave empty |
-   | Build Command | `npm install` |
-   | Start Command | `npm run signal` |
-   | Health Check Path | `/` |
+The default configuration supports local live transfers. Optional provider settings are commented out in the example; enable them only with your own credentials. Never commit `.env.local`.
 
-5. Under **Environment Variables**, add `CLIENT_ORIGIN` with your Vercel URL, for example `https://swooshit.vercel.app`. During testing you can permit both local and production URLs with a comma-separated value: `http://localhost:3000,https://swooshit.vercel.app`.
-6. Choose a compute plan and click **Create Web Service**. Do not define `PORT`; Render supplies it automatically and the signaling server uses it.
-7. Wait for the deploy to succeed, then copy Render’s public HTTPS URL, for example `https://swooshit-signaling.onrender.com`. Opening that URL should return a small JSON health response.
-8. In Vercel, open the frontend project’s **Settings** > **Environment Variables**. Add:
+Start two terminals:
 
-   ```text
-   NEXT_PUBLIC_SIGNALING_URL=https://swooshit-signaling.onrender.com
-   ```
+```sh
+# Terminal 1: persistent signaling server, port 3001
+npm run signal
+```
 
-9. Redeploy the Vercel project. Open the live site on two devices to test pairing and a small file transfer.
+```sh
+# Terminal 2: Next.js frontend and API, port 3000
+npm run dev
+```
 
-Every push to the selected GitHub branch triggers a new Render deployment. When the Vercel domain changes, update `CLIENT_ORIGIN` in Render and let Render redeploy.
+Open `http://localhost:3000` in two separate browser profiles to test distinct device codes. Tabs in the same profile share local storage. If a live code is already in use, the server assigns the new connection a different code; use the code displayed in the receiving tab. For phone testing, use an HTTPS frontend and a signaling URL reachable by both devices; a phone's localhost is the phone itself.
 
-## Sending code or text
+### Environment variables
 
-Select **CODE / TEXT**, paste your snippet, enter the receiver's device code, and click **Send text**. The receiver clicks **Accept & open editor**; the text transfers automatically into a separate received editor with a **Copy code** button. Editors show line numbers and counts, support tab indentation, and scroll horizontally without wrapping long lines. Text is sent as chunked UTF-8 over WebRTC, preserving spaces, tabs and blank lines without formatting or executing code. Received text stays in browser memory and is lost on refresh unless copied elsewhere.
+| Variable | Where | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SIGNALING_URL` | Next.js; included at build time | Reachable signaling URL; defaults to `http://localhost:3001`. |
+| `CLIENT_ORIGIN` | Signaling process | Comma-separated frontend origins. Required when NODE_ENV=production; otherwise defaults to localhost:3000 and 127.0.0.1:3000. |
+| `PORT` / `SIGNAL_PORT` | Signaling process | Listen port; `PORT` takes precedence, then `SIGNAL_PORT`, then `3001`. |
+| `METERED_DOMAIN` | Next.js server only | Optional `your-app.metered.live` host. |
+| `METERED_TURN_API_KEY` | Next.js server only | Optional credential API key for TURN fallback. |
+| `SUPABASE_URL` | Next.js server only | Optional Supabase project URL. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Next.js server only | Privileged offline backend credential; never expose in client code. |
+| `CRON_SECRET` | Next.js server only | At least 32 random characters; authorizes scheduled cleanup. |
 
-Deploy both the frontend on Vercel and the updated signaling service on Render for the text-specific acceptance prompt. Refresh both devices after deployment. Run `node --test tests/text-transfer.test.mjs` to check the text encoding/chunking round trip; this does not replace a live two-device test.
+Next.js loads `.env.local`; the standalone signaling script does not. Configure its variables in your shell or hosting environment. Optional offline delivery requires separately supplied Supabase schema and setup instructions, server-side credentials, and verified scheduled cleanup. The deployment assets are maintained privately and are not included in this repository.
 
-## STUN + Metered TURN fallback
+## Usage
 
-1. Keep `NEXT_PUBLIC_SIGNALING_URL` set to your Render signaling URL in Vercel.
-2. In your Metered TURN dashboard, create or select a valid credential. Use its credential-specific API key, not an account master secret. Newly created credentials may need up to two minutes to propagate. See [Metered's setup guide](https://www.metered.ca/docs/turn-server-service/creating-turn-credentials/).
-3. In Vercel, add `METERED_DOMAIN=your-app.metered.live` and `METERED_TURN_API_KEY=your-credential-api-key` to the environments you use. Never add a `NEXT_PUBLIC_` prefix or commit real credentials. For local testing, set them in `.env.local`.
-4. Push and redeploy Vercel. Render signaling needs no changes. Refresh both devices before testing.
+1. Open Swooshit on the receiver and share its **Live transfer** code.
+2. On the sender, choose files, select a folder, or switch to **CODE / TEXT** and paste a snippet.
+3. Enter the receiver's code and request the transfer.
+4. Review and accept on the receiver. Keep both browsers open until completion.
 
-The browser fetches TURN configuration from `/api/ice-servers`; the endpoint calls Metered server-side without caching or returning the API key. Browser users necessarily receive TURN usernames/passwords. The app adds STUN and retains the returned TURN UDP/TCP/TLS endpoints, including TLS on port 443 when supplied by Metered.
+For **Send for later**, the receiver must first open that mode to create an inbox. Share its separate code, queue an item on the sender, and wait for **Queued** before closing the page. The receiver returns in the same browser/profile to accept within 24 hours. Clearing site data loses private keys and inbox access.
 
-`iceTransportPolicy: "all"` permits both direct and relay candidates. ICE chooses a working path: this is automatic relay fallback, not a promise that a direct route always wins or that relay usage is zero. The TURN-only policy is not used. Relayed traffic consumes Metered quota; monitor usage and provider billing limits. The public credential endpoint supports anonymous clients and is not a hard spending cap or abuse-control system.
+## Project structure
 
-If the endpoint fails, the UI explicitly warns that only direct connections are being attempted. If all paths fail, check Metered credentials/quota and network permissions. TURN/TLS may help with blocked UDP, but institutional networks can block TURN too. Direct connections can reveal network addresses to the other device. Both pages must stay open.
+```text
+app/                  Pages, layout, styles, and Next.js API routes
+components/           Transfer interface, editor, and theme controls
+lib/                  Folder ZIPs, WebRTC config, encryption, and API helpers
+server/               Signaling entry point, validation, authorization, and limits
+tests/                Unit tests and opt-in Supabase integration test
+docs/                 Architecture, deployment, and preview guidance
+.github/              CI and dependency update configuration
+```
 
-Test the receiver-accept flow on ordinary Wi-Fi and on the college network. Send a small file, a folder ZIP and a code snippet. Inspect browser WebRTC diagnostics (for example `chrome://webrtc-internals`): a selected local or remote candidate of type `relay` means TURN is carrying the transfer. Refresh both pages after correcting credential settings.
+## Development and testing
 
-Run `node --import tsx --test tests/metered-turn.test.ts tests/webrtc-config.test.ts tests/text-transfer.test.mjs` for credential/configuration checks. These use mocked provider responses and do not verify live Metered credentials or college-network access.
+```sh
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm start
+```
+
+`npm start` serves the production frontend after a build. Live transfers still require signaling. CI installs the lockfile and runs lint, type checking, tests, and a production build without provider secrets.
+
+Tests cover real local Socket.IO request/accept exchanges, signaling authorization and validation, code collisions, rate/capacity limits, expiry, folder paths, encrypted folder/text workflows, tampering, offline authorization, TURN response handling, receipts, and themes. The Supabase integration test is skipped by default and requires private deployment setup and a dedicated test project. The browser suite below covers same-host WebRTC delivery; it does not replace cross-device or real-network TURN testing.
+
+### Browser regression tests
+
+The Playwright suite builds the real production app, starts dedicated frontend/signaling servers on ports 3100/3101, and uses isolated browser contexts. It verifies binary and empty-file bytes, folder ZIP paths/contents, Unicode text, offline-recipient feedback, and rejection behavior. Provider credentials are disabled for this local suite.
+
+```sh
+npx playwright install chromium
+npm run test:e2e
+```
+
+To use an installed Chrome on PowerShell: `$env:PLAYWRIGHT_CHANNEL = "chrome"; npm.cmd run test:e2e`. Leave ports 3100 and 3101 free. Do not run another Next.js build concurrently with this command. The test build embeds the local signaling URL; rebuild with your real deployment variables before deploying. Test output is ignored under `test-results/`.
+
+Live rejection currently closes the receiver dialog without notifying the sender; the sender remains waiting until they retry/refresh. The test records this limitation, not complete rejection feedback.
+
+## Future improvements
+
+These review opportunities are not implemented features:
+
+- Add deployment-level abuse controls and monitoring for signaling and public TURN credentials.
+- Add real-browser transfer regression tests across direct and TURN connections.
+- Explore recipient key verification and recoverable inbox identities.
+
+## Author
+
+Built by **[Trushil Patel](https://github.com/trushil-patel)**.
+
+## License
+
+No license has been selected. The author must choose a license before presenting this as a licensed open-source project. See the cleanup report for options.

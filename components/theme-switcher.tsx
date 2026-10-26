@@ -6,6 +6,8 @@ import { parseTheme, type ThemePreference } from "../lib/theme";
 export default function ThemeSwitcher() {
   const [preference, setPreference] = useState<ThemePreference | null>(null);
   useEffect(() => {
+    // Restore browser-only preferences after hydration without changing initial HTML.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     try { setPreference(parseTheme(localStorage.getItem("swooshit-theme"))); }
     catch { setPreference("light"); }
     const sync = (event: StorageEvent) => {
