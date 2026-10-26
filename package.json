@@ -36,7 +36,7 @@
     "eslint-config-next": "^16.4.3",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "tsx": "^4.19.2",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   },
   "description": "Browser-to-browser file and text transfers, with optional encrypted temporary inboxes.",
