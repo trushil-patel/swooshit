@@ -21,7 +21,7 @@
     "next": "^16.4.3",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "react-dropzone": "^14.3.5",
+    "react-dropzone": "^20.1.4",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1"
   },
