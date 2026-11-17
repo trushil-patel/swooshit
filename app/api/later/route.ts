@@ -49,6 +49,10 @@ export async function POST(request: Request) {
       const envelope = body.envelope;
       if (!/^\d{6}$/.test(body.code) || !Number.isSafeInteger(body.size) || body.size < 20 || body.size > LATER_MAX_BYTES + 8192 || !["file", "text"].includes(body.kind)
         || envelope?.version !== 1 || !/^[A-Za-z0-9+/]{16}$/.test(envelope.iv) || !/^[A-Za-z0-9+/]{342}==$/.test(envelope.key)) throw new LaterError("Invalid encrypted transfer.");
+      // Check Storage before reserving an item and consuming the daily upload quota.
+      const bucket = await db.storage.getBucket(BUCKET);
+      if (bucket.error) throw new LaterProviderError("storage-bucket", bucket.error);
+      if (!bucket.data || bucket.data.public) throw new LaterError("Send for later requires a private swooshit-later bucket. Check its Storage settings before retrying.", 503);
       const result = await db.rpc("dl_reserve", { sender: device.id, receiver_code: body.code, encryption: envelope, byte_count: body.size, item_kind: body.kind });
       if (result.error) {
         if (result.error.code === "P0001") throw new LaterError("Cannot queue transfer. Check the recipient code or daily/inbox limits.", 409);

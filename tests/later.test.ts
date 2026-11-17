@@ -88,6 +88,8 @@ test("offline API and cleanup reject requests without private credentials", asyn
 test("offline diagnostics preserve HTTP status and redact arbitrary provider data", () => {
   const failure = new LaterProviderError("reserve", { message: "private token and URL", code: "42702" }, 400);
   assert.deepEqual(serviceDiagnostic(failure), { operation: "reserve", code: "42702", status: 400 });
+  assert.equal(serviceDiagnostic({ code: "InvalidMimeType" }).code, "InvalidMimeType");
+  assert.match(serviceError({ code: "InvalidMimeType" }).message, /application\/octet-stream/);
   assert.equal(serviceDiagnostic({ code: "secret-token", status: "private" }).code, "UNKNOWN");
   assert.match(serviceError(new LaterProviderError("reserve", { message: "private" }, 403)).message, /SERVICE_ROLE_KEY/);
   assert.equal(serviceError({ code: "P0001", message: "Registration limit reached" }).status, 429);
@@ -106,31 +108,48 @@ test("send failures identify reserve or upload-ticket without leaking provider d
   const logs: unknown[][] = [];
   t.mock.method(console, "error", (...args: unknown[]) => logs.push(args));
   let stage = "reserve";
+  let reservations = 0;
   t.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
     const url = String(input);
     let data: unknown = null;
     let status = 200;
     if (url.includes("/dl_devices")) data = { id: "device", code: "123456" };
     else if (url.includes("/dl_take_limit")) data = true;
+    else if (url.includes("/storage/v1/bucket/")) {
+      if (stage === "storage-bucket") { status = 400; data = { code: "NoSuchBucket", message: "private-provider-message" }; }
+      else data = { id: "swooshit-later", name: "swooshit-later", public: stage === "public-bucket" };
+    }
     else if (url.includes("/dl_reserve")) {
+      reservations++;
       if (stage === "reserve") { status = 400; data = { code: "42702", message: "private-provider-message" }; }
       else data = { id: "transfer", object_path: "private-object/payload.bin" };
     } else if (url.includes("/storage/")) {
-      status = 400; data = { statusCode: "400", message: "private-provider-message", error: "StorageError" };
+      status = 400; data = { statusCode: "400", code: "DatabaseError", message: "private-provider-message", error: "StorageError" };
     } else throw new Error("Unexpected request");
     return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
   });
-  for (stage of ["reserve", "upload-ticket"]) {
+  for (stage of ["storage-bucket", "public-bucket", "reserve", "upload-ticket"]) {
     const response = await POST(new Request("https://test/api/later", {
       method: "POST", headers: { Authorization: `Bearer ${"a".repeat(64)}` },
       body: JSON.stringify({ action: "prepare", code: "654321", size: 100, kind: "file", envelope: { version: 1, iv: "a".repeat(16), key: "a".repeat(342) + "==" } }),
     }));
     assert.equal(response.status, 503);
     const body = await response.json();
+    if (stage === "public-bucket") {
+      assert.match(body.error, /private swooshit-later bucket/);
+      assert.equal(reservations, 0);
+      continue;
+    }
+    if (stage === "storage-bucket") {
+      assert.match(body.error, /NoSuchBucket/);
+      assert.equal(reservations, 0);
+    }
+    if (stage === "upload-ticket") assert.match(body.error, /DatabaseError/);
     assert.match(body.error, new RegExp(stage));
     assert.match(body.reference, /^[a-f0-9-]{36}$/);
     assert.doesNotMatch(JSON.stringify(body), /private-provider-message|private-object|test-server-key/);
   }
-  assert.equal(logs.length, 2);
+  assert.equal(logs.length, 3);
+  assert.equal(reservations, 2);
   assert.doesNotMatch(JSON.stringify(logs), /private-provider-message|private-object|test-server-key/);
 });
