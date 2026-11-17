@@ -5,6 +5,22 @@ export const BUCKET = "swooshit-later";
 export class LaterError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }
+export class LaterProviderError extends Error {
+  constructor(public operation: string, public providerError: unknown, public providerStatus?: number) {
+    super("Offline provider request failed");
+  }
+}
+
+export function serviceDiagnostic(error: unknown) {
+  const provider = error instanceof LaterProviderError ? error.providerError : error;
+  const detail = provider && typeof provider === "object" ? provider as { code?: unknown; status?: unknown; statusCode?: unknown } : {};
+  const status = Number(error instanceof LaterProviderError ? error.providerStatus ?? detail.status ?? detail.statusCode : detail.status ?? detail.statusCode);
+  return {
+    operation: error instanceof LaterProviderError ? error.operation : "request",
+    code: typeof detail.code === "string" && /^(?:[0-9A-Z]{5}|PGRST\d{3})$/.test(detail.code) ? detail.code : "UNKNOWN",
+    status: Number.isInteger(status) && status >= 0 && status <= 599 ? status : null,
+  };
+}
 export function adminClient() {
   const url = process.env.SUPABASE_URL?.trim();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
@@ -21,10 +37,17 @@ export function adminClient() {
 // Classify provider failures without exposing raw messages, credentials or URLs.
 export function serviceError(error: unknown): LaterError {
   if (error instanceof LaterError) return error;
-  const detail = error && typeof error === "object" ? error as { code?: string; message?: string; status?: number; statusCode?: string | number } : {};
+  const provider = error instanceof LaterProviderError ? error.providerError : error;
+  const detail = provider && typeof provider === "object" ? provider as { code?: string; message?: string; status?: number; statusCode?: string | number } : {};
   const code = detail.code || "";
   const message = typeof detail.message === "string" ? detail.message : "";
-  const status = Number(detail.status || detail.statusCode);
+  const status = Number(error instanceof LaterProviderError ? error.providerStatus ?? detail.status ?? detail.statusCode : detail.status ?? detail.statusCode);
+  if (code === "P0001" && message === "Device key mismatch") {
+    return new LaterError("This browser's encryption key does not match its registered inbox. Use the original browser/profile for existing transfers; do not clear its site data.", 409);
+  }
+  if (code === "P0001" && message === "Registration limit reached") {
+    return new LaterError("The daily limit for new inboxes has been reached. Try again tomorrow.", 429);
+  }
   if (["PGRST202", "PGRST205", "42P01", "42883"].includes(code)) {
     return new LaterError("Send for later database setup is missing or outdated. Run supabase/offline.sql in the configured project's SQL Editor, then retry.", 503);
   }
@@ -36,6 +59,9 @@ export function serviceError(error: unknown): LaterError {
   }
   if (/fetch failed|failed to fetch|network|timeout|timed out|ENOTFOUND|ECONNREFUSED/i.test(message)) {
     return new LaterError("Send for later cannot reach Supabase. Check the project URL, project availability and server network connection, then retry.", 503);
+  }
+  if (code === "PGRST002" || code === "PGRST000" || code === "PGRST001" || status === 502 || status === 504) {
+    return new LaterError("Supabase's database API is unavailable. Check project availability and database health, then retry.", 503);
   }
   return new LaterError("Send for later is temporarily unavailable. Retry shortly; if it persists, check the Supabase project and backend setup.", 503);
 }
