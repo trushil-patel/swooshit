@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useDropzone } from "react-dropzone";
 import { io, Socket } from "socket.io-client";
 import CodeEditor from "./code-editor";
@@ -13,7 +14,6 @@ import {
   Check,
   Copy,
   File,
-  Link2,
   ShieldCheck,
   UploadCloud,
   Wifi,
@@ -356,9 +356,14 @@ export default function SwooshitApp() {
       <div className="fixed inset-0 noise pointer-events-none" />
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-5 py-6">
         <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-cyan-300 text-slate-950">
-            <Link2 size={20} />
-          </span>
+          <Image
+            src="/swooshit-logo.svg"
+            alt="Swooshit logo"
+            width={40}
+            height={40}
+            className="h-10 w-10 shrink-0"
+            priority
+          />
           <div>
             <h1 className="text-lg font-semibold">
               swooshit <span className="text-cyan-300">/ P2P</span>
